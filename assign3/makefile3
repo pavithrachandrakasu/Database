@@ -1,0 +1,37 @@
+end: recordManager3 clean
+
+recordManager3: test_assign3_3.o record_mgr.o rm_serializer.o expr.o storage_mgr.o dberror.o list.o buffer_mgr_stat.o buffer_mgr.o
+	gcc test_assign3_3.o record_mgr.o rm_serializer.o expr.o storage_mgr.o dberror.o list.o buffer_mgr_stat.o  buffer_mgr.o -o recordManager3
+
+test_assign3_3.o: test_assign3_3.c dberror.h expr.h record_mgr.h tables.h test_helper.h list.h storage_mgr.h
+	gcc -c test_assign3_3.c
+
+test_expr.o: test_expr.c
+	gcc -c test_expr.c
+
+record_mgr.o: record_mgr.c record_mgr.h list.h dberror.h 
+	gcc -c record_mgr.c
+
+list.o: list.c list.h
+	gcc -c list.c
+
+rm_serializer.o: rm_serializer.c record_mgr.h dberror.h tables.h
+	gcc -c rm_serializer.c
+
+expr.o: expr.c expr.h
+	gcc -c expr.c
+
+storage_mgr.o: storage_mgr.c storage_mgr.h
+	gcc -c storage_mgr.c
+
+dberror.o: dberror.c dberror.h
+	gcc -c dberror.c
+
+buffer_mgr.o: buffer_mgr.c buffer_mgr.h
+	gcc -c buffer_mgr.c
+
+buffer_mgr_stat.o: buffer_mgr_stat.c buffer_mgr_stat.h
+	gcc -c buffer_mgr_stat.c
+
+clean:
+	rm -rf *.o

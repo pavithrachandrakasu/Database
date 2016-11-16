@@ -1,0 +1,27 @@
+end: bufferManager1 clean
+
+bufferManager1:test_assign2_1.o dberror.o storage_mgr.o buffer_mgr.o list.o buffer_mgr_stat.o
+	     gcc test_assign2_1.o dberror.o storage_mgr.o buffer_mgr.o list.o buffer_mgr_stat.o -o bufferManager1
+
+
+test_assign2_1.o :test_assign2_1.c test_helper.h dberror.h storage_mgr.h buffer_mgr.h list.h buffer_mgr_stat.h
+		  gcc -c test_assign2_1.c
+
+dberror.o:dberror.c dberror.h
+	  gcc -c dberror.c
+
+storage_mgr.o:storage_mgr.c storage_mgr.h dberror.h
+	      gcc -c storage_mgr.c
+
+buffer_mgr.o:buffer_mgr.c buffer_mgr.h
+	     gcc -c buffer_mgr.c
+
+list.o:list.c list.h
+		   gcc -c list.c
+
+buffer_mgr_stat.o:buffer_mgr_stat.c buffer_mgr_stat.h
+		  gcc -c buffer_mgr_stat.c
+
+clean:
+	-rm -rf *.o 
+

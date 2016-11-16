@@ -1,0 +1,206 @@
+Assignment 2 - CS 525 Advanced Database Organization
+
+Buffer Manager Implementation:
+-------------------------------
+
+Group Members:
+--------------
+
+1) Gautham Giridharan - ggiridh1@hawk.iit.edu - A20359071
+
+2) Pavithra Kuttiyandi Chandrakasu - pkuttiya@hawk.iit.edu - A20353191  
+
+3) Hatim Shabbir Dhuliawala - hdhuliaw@hawk.iit.edu - A20351495 
+
+Contents:
+---------
+
+1) Instructions to compile and run the code
+2) Description of new Data structures used 
+3) Description of the functions used
+4) Description of additional functions used
+5) Additional Page Replacement Strategies implemented
+6) Additional Test cases 
+7) Additional Error Checks 
+
+1) Instructions to compile and run the code
+
+----------------------------------------------
+
+i) In the terminal, navigate to the assign2 directory.
+
+ii) Type: 
+	make -f makefile1  ( for FIFO ) 
+	make -f makefile2 ( for LRU ) 
+	make -f makefile3  ( for LRU_K ) 
+	make -f makefile4  ( for CLOCK ) 
+
+iii) Output: 
+
+	./bufferManager1
+	./bufferManager2
+	./bufferManager3
+	./bufferManager4
+
+
+
+2) Description of new Data structures used 
+------------------------------------------
+
+In this implementation, we have defined two new data structures namely PoolInfo and PageFrame as follows: 
+
+
+typedef struct PoolInfo {
+	int readPages; // no of pages read from page file since pool initialisation
+	int writePages; // no of pages written to page file since pool initialisation
+	PageFrame *pf; // structure to store each information about the page
+	int position; // global position no for pages used for LRU strategy
+	int nodeCount; // used for FIFO strategy
+	int lru_k; // used for LRU_K strategy
+} PoolInfo;
+
+typedef struct PageFrame {
+                int fixCount; // no of times page is pinned
+                bool dirty; // tells if page is dirty
+                BM_PageHandle ph; // PageHandle contains page no and data
+                int position; // used for LRU strategy (at what position this page inserted recently) for eg 2, 4, 1 ,3 Position of 2 is 0, 4 is 4, 1 is 2, 3 is 3.
+                bool handle;  // used for clock strategy
+                struct PageFrame *next; // pointer to the next page
+}PageFrame;
+
+
+3) Description of the functions used
+---------------------------------------
+
+
+************ Buffer Manager Interface Pool Handling **********
+
+initBufferPool Function:
+
+	1) Creates a buffer pool with size of numPages and initializes file name, total number of page frames and replacement strategy
+	2) Initializes the new data structure PoolInfo and stores the buffer pool respective information
+	3) Initializes the new data structure PageFrame as an linked list frames with page number -1 and other values to NULL. The linked list here we used is circular linked list. 
+	3)We have used the mgmtData pointer of BM_BufferPool structure to store the PoolInfo information.
+
+shutdownBufferPool Function:
+
+	1) Before shutting down the buffer pool, checks whether any page is dirty. If it is dirty, write the contents of the page back to the disk and increment the writePages count in PoolInfo.
+	2) Checks whether anyone is still accessing the page frames (pinned pages) of buffer pool and throws an error in case of failure.
+	3) At the end, it frees all the resources allocated to the data structures.
+
+forceFlushPool Function:
+	
+	1) Each page frame is checked whether any page frame has dirty bit set and fix count value as zero.
+	2) Checked pages are written back to disk using the Storage manager function writeBlock and increment the writePages count in PoolInfo.
+	3) If everything is fine, returns RC_OK. 
+
+
+************ Buffer Manager Interface Access Pages *************
+
+markDirty Function:
+
+	1.Checks for the target page in the buffer pool.
+	2.If page found, marks the dirty bit of the page to true. 
+
+unpinPage Function:
+
+	1) Checks whether the buffer pool has been initialized, throws an error in case of failure.
+	2) Check the linked list and decrement the fix count to the requested page. 
+	3) If the fix count of requested page is zero or less than that, return an appropriate failure code.
+
+forcePage Function:
+
+	1) Write the current content of the page back to the page file on disk .
+	3) Increment the writePages count in PoolInfo.
+	4) Successful completion returns RC_OK. 
+
+pinPage Function:
+
+This involves two cases:-
+1) If Page is already exists in the buffer pool : 	
+	
+	a) Checks the entire buffer pool and increments the fix count of the respective page. 
+	b) Obtain the respective page frame, read the current page data from the page handle to the file handle. 
+	c) Increment the readPages count as soon as the page is read.
+	
+2)If  page not exists in the buffer pool: 
+	
+	a) Use the given the page replacement strategy and enter the respective page replacement strategy module. 
+	b) If there is a empty frame, then copy the respective page to the empty frame. If not, replace the page using page replacement strategy called. 
+	c) Once the page is added or replaced inside the buffer pool, get the respective page frame and increment the fix count. 
+	d) Read the current page data from page handle to the file handle and increment the readPages count in PoolInfo. 
+
+************ Statistics Interface **************
+
+getFrameContents Function:
+
+The getFrameContents function returns an array of PageNumbers (of size numPages) where the ith element is the number of the page stored in the ith page frame. An empty page frame is represented using the constant RC_EMPTY_FRAME. 
+
+
+getDirtyFlags Function:
+
+The getDirtyFlags function returns an array of bools (of size numPages) where the ith element is TRUE if the page stored in the ith page frame is dirty. Empty page frames are considered as clean.
+
+
+getFixCounts Function:
+
+The getFixCounts function returns an array of ints (of size numPages) where the ith element is the fix count of the page stored in the ith page frame. Return 0 for empty page frames.
+
+
+getNumReadIO Function:
+
+The getNumReadIO function returns the number of pages that have been read from disk since a buffer pool has been initialized.
+
+
+getNumWriteIO Function:
+
+getNumWriteIO returns the number of pages written to the page file since the buffer pool has been initialized.
+
+
+4) Description of additional functions used
+------------------------------------------------
+We have created few additional functions for implementing FIFO and LRU page replacement strategies:
+
+    a) FIFO :
+
+        Firstly, traverse through the entire page frames in the buffer pool and find out the empty page frames available. If empty frames are available, place the given page to that particular page frame. If buffer pool is full, check for the page frame count and replace the page with lesser node count. Before replacing check whether the page is dirty, if dirty then writes the contents of page to the disk before replacing the page.
+   
+    b) LRU :
+       
+        If empty page frames are available, then place the page in the particular page frame. If the buffer pool is full, check for the page frame which has minimum position value and replace that page with the given page. Before replacing, if the page is dirty then write the page content to the disk and then replace the page.
+
+    c) CLOCK:
+
+	CLOCK is a variant of FIFO .Firstly, traverse through the entire page frames in the buffer pool and find out the empty page frames available. If empty frames are available, place the given page to that particular page frame. If buffer pool is full, check for the page frame count and replace the page with reference bit and fix count as zero.Handle is used to get the current position of the page frame. Before replacing check whether the page is dirty, if dirty then writes the contents of page to the disk before replacing the page.
+
+    d) LRU_K:
+       
+        If empty page frames are available, then place the page in the particular page frame. If the buffer pool is full, check for the page frame which has minimum position value and minimum  lru_k value(lru_k stores how many times the page has been referenced) and replace that page with the given page. Before replacing, if the page is dirty then write the page content to the disk and then replace the page.
+
+
+5) Additional Page Replacement Strategies implemented
+--------------------------------------------------------
+
+We have implemented two page replacement strategies:
+
+	1) Clock 
+	2) LRU_K 
+
+6) Additional Test cases 
+---------------------------
+
+We have tested the additional page replacement strategies:
+
+	1) Clock
+	2) LRU_K
+
+
+7) Additional Error Checks 
+----------------------------
+
+	a) #define RC_NOT_VALID_REPLACEMENT_STRATEGY 400 // not a valid replacement strategy
+	b) #define RC_EMPTY_FRAME 401 // empty frame failure
+	c) #define RC_SHUTDOWN_POOL_ERROR 402 // buffer pool shutdown error
+	d) #define RC_UNPIN_FAILED 403 // unpin failure
+	e) #define RC_DIRTY_FAILED 404 // dirty bit set failure 
+
